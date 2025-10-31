@@ -2,7 +2,9 @@ package com.praveen.aggregator_service.service;
 
 
 import com.praveen.aggregator_service.dto.*;
+import com.praveen.aggregator_service.error.AggregatorErrorHandler;
 import com.praveen.aggregator_service.mapper.TradeRequestMapper;
+import org.springframework.http.ProblemDetail;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -26,6 +28,12 @@ public class CustomerService {
         return customerWebClient.get()
                 .uri("/{id}", id)
                 .retrieve()
+                .onStatus(httpStatusCode ->
+                        httpStatusCode.is4xxClientError() ||
+                        httpStatusCode.is5xxServerError(),
+                        response -> response
+                                .bodyToMono(ProblemDetail.class)
+                                .flatMap(AggregatorErrorHandler::handleError))
                 .bodyToMono(CustomerPortfolioResponse.class);
     }
 
@@ -41,6 +49,12 @@ public class CustomerService {
                 .uri("/{customerId}/trade", customerId)
                 .bodyValue(stockTradeRequest)
                 .retrieve()
+                .onStatus(httpStatusCode ->
+                                httpStatusCode.is4xxClientError() ||
+                                        httpStatusCode.is5xxServerError(),
+                        response -> response
+                                .bodyToMono(ProblemDetail.class)
+                                .flatMap(AggregatorErrorHandler::handleError))
                 .bodyToMono(TradeResponse.class);
     }
 
