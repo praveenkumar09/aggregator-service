@@ -68,6 +68,22 @@ public class ApplicationErrorHandler {
                 });
     }
 
+    @ExceptionHandler(Exception.class)
+    public Mono<ServerResponse> handleGenericException(
+            Exception exception,
+            ServerRequest request
+    ) {
+        return generateProblemDetail(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                exception,
+                request,
+                problemDetail -> {
+                    problemDetail.setType(URI.create("http://example.com/problems/internal-server-error"));
+                    problemDetail.setDetail("An unexpected error occurred. Please try again later.");
+                });
+    }
+
+
     private Mono<ServerResponse> generateProblemDetail(HttpStatus httpStatus, Exception exception, ServerRequest request, Consumer<ProblemDetail> consumer) {
         var problemDetail = ProblemDetail.forStatusAndDetail(httpStatus, exception.getMessage());
         problemDetail.setTitle(exception.getClass().getSimpleName());
