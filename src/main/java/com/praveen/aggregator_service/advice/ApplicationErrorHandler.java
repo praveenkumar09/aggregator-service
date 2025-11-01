@@ -4,18 +4,16 @@ import com.praveen.aggregator_service.error.AggregatorException;
 import org.springframework.core.codec.DecodingException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
-import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.bind.support.WebExchangeBindException;
-import org.springframework.web.reactive.function.server.ServerRequest;
-import org.springframework.web.reactive.function.server.ServerResponse;
-import reactor.core.publisher.Mono;
+import org.springframework.web.server.ServerWebInputException;
 
 import java.net.URI;
 import java.util.function.Consumer;
 
-@ControllerAdvice
+@RestControllerAdvice
 public class ApplicationErrorHandler {
 
     @ExceptionHandler(AggregatorException.class)
@@ -23,28 +21,24 @@ public class ApplicationErrorHandler {
         return exception.getProblemDetail();
     }
 
-    @ExceptionHandler(WebExchangeBindException.class)
-    public Mono<ServerResponse> handleValidationException(
-            WebExchangeBindException exception,
-            ServerRequest request
+    @ExceptionHandler(ServerWebInputException.class)
+    public ProblemDetail handleValidationException(
+            ServerWebInputException exception
     ) {
-        var errors = exception.getBindingResult()
-                .getFieldErrors()
-                .stream()
-                .map(error -> error.getField() + ": " + error.getDefaultMessage())
-                .toList();
+        System.out.println("WebExchangeBindException is triggered");
+        System.out.println("Exception class: " + exception.getClass().getName());
+        System.out.println("Exception message: " + exception.getMessage());
 
-        return generateProblemDetail(HttpStatus.BAD_REQUEST,exception, request, problemDetail -> {
+        return generateProblemDetail(HttpStatus.BAD_REQUEST,exception, problemDetail -> {
             problemDetail.setType(URI.create("http://example.com/problems/bad-request"));
-            problemDetail.setDetail("Invalid Input: " + String.join(", ", errors) + ".");
+            problemDetail.setProperty("error","Invalid Input :" + exception.getMessage() + ".");
         });
     }
 
 
     @ExceptionHandler(DecodingException.class)
-    public Mono<ServerResponse> handleInvalidEnum(
-            DecodingException exception,
-            ServerRequest request
+    public ProblemDetail handleInvalidEnum(
+            DecodingException exception
     ) {
         String message = exception.getMessage();
 
@@ -61,35 +55,36 @@ public class ApplicationErrorHandler {
         return generateProblemDetail(
                 HttpStatus.BAD_REQUEST,
                 exception,
-                request,
                 problemDetail -> {
                     problemDetail.setType(URI.create("http://example.com/problems/bad-request"));
-                    problemDetail.setDetail("Invalid input: "+ finalMessage);
+                    problemDetail.setProperty("error","Invalid input: "+ finalMessage);
                 });
     }
 
     @ExceptionHandler(Exception.class)
-    public Mono<ServerResponse> handleGenericException(
-            Exception exception,
-            ServerRequest request
+    public ProblemDetail handleGenericException(
+            Exception exception
     ) {
+        System.out.println("Generic exception is triggered");
+        System.out.println("Exception class: " + exception.getClass().getName());
+        System.out.println("Exception message: " + exception.getMessage());
+
         return generateProblemDetail(
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 exception,
-                request,
                 problemDetail -> {
                     problemDetail.setType(URI.create("http://example.com/problems/internal-server-error"));
-                    problemDetail.setDetail("An unexpected error occurred. Please try again later.");
+                    problemDetail.setProperty("error","An unexpected error occurred. Please try again later.");
                 });
     }
 
 
-    private Mono<ServerResponse> generateProblemDetail(HttpStatus httpStatus, Exception exception, ServerRequest request, Consumer<ProblemDetail> consumer) {
+    private ProblemDetail generateProblemDetail(HttpStatus httpStatus, Exception exception, Consumer<ProblemDetail> consumer) {
         var problemDetail = ProblemDetail.forStatusAndDetail(httpStatus, exception.getMessage());
         problemDetail.setTitle(exception.getClass().getSimpleName());
-        problemDetail.setInstance(URI.create(request.uri().toString()));
+        problemDetail.setInstance(URI.create("/" + exception.getClass().getSimpleName().replace("Exception", "")));
         consumer.accept(problemDetail);
-        return ServerResponse.status(httpStatus).bodyValue(problemDetail);
+        return problemDetail;
     }
 
 }
