@@ -8,7 +8,11 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.support.WebExchangeBindException;
+import org.springframework.web.reactive.function.server.ServerRequest;
+import org.springframework.web.reactive.function.server.ServerResponse;
+import reactor.core.publisher.Mono;
 
+import java.net.URI;
 import java.util.function.Consumer;
 
 @ControllerAdvice
@@ -20,21 +24,28 @@ public class ApplicationErrorHandler {
     }
 
     @ExceptionHandler(WebExchangeBindException.class)
-    public ProblemDetail handleValidationException(WebExchangeBindException exception) {
-        String detail = "Validation failed";
-
+    public Mono<ServerResponse> handleValidationException(
+            WebExchangeBindException exception,
+            ServerRequest request
+    ) {
         var errors = exception.getBindingResult()
                 .getFieldErrors()
                 .stream()
                 .map(error -> error.getField() + ": " + error.getDefaultMessage())
                 .toList();
 
-        return generateProblemDetail(HttpStatus.BAD_REQUEST,detail, problemDetail -> problemDetail.setProperty("errors", errors));
+        return generateProblemDetail(HttpStatus.BAD_REQUEST,exception, request, problemDetail -> {
+            problemDetail.setType(URI.create("http://example.com/problems/bad-request"));
+            problemDetail.setDetail("Invalid Input: " + String.join(", ", errors) + ".");
+        });
     }
 
 
     @ExceptionHandler(DecodingException.class)
-    public ProblemDetail handleInvalidEnum(DecodingException exception) {
+    public Mono<ServerResponse> handleInvalidEnum(
+            DecodingException exception,
+            ServerRequest request
+    ) {
         String message = exception.getMessage();
 
         // Extract friendly error message for invalid enum values
@@ -46,13 +57,23 @@ public class ApplicationErrorHandler {
             message = "Invalid request body format";
         }
 
-        return generateProblemDetail(HttpStatus.BAD_REQUEST, message, problemDetail -> {});
+        String finalMessage = message;
+        return generateProblemDetail(
+                HttpStatus.BAD_REQUEST,
+                exception,
+                request,
+                problemDetail -> {
+                    problemDetail.setType(URI.create("http://example.com/problems/bad-request"));
+                    problemDetail.setDetail("Invalid input: "+ finalMessage);
+                });
     }
 
-    private ProblemDetail generateProblemDetail(HttpStatus httpStatus, String detail, Consumer<ProblemDetail> consumer) {
-        var problemDetail = ProblemDetail.forStatusAndDetail(httpStatus, detail);
+    private Mono<ServerResponse> generateProblemDetail(HttpStatus httpStatus, Exception exception, ServerRequest request, Consumer<ProblemDetail> consumer) {
+        var problemDetail = ProblemDetail.forStatusAndDetail(httpStatus, exception.getMessage());
+        problemDetail.setTitle(exception.getClass().getSimpleName());
+        problemDetail.setInstance(URI.create(request.uri().toString()));
         consumer.accept(problemDetail);
-        return problemDetail;
+        return ServerResponse.status(httpStatus).bodyValue(problemDetail);
     }
 
 }
