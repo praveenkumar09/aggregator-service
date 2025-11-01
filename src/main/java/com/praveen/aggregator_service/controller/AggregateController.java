@@ -4,6 +4,7 @@ import com.praveen.aggregator_service.domain.Ticker;
 import com.praveen.aggregator_service.dto.*;
 import com.praveen.aggregator_service.service.CustomerService;
 import com.praveen.aggregator_service.service.StockService;
+import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
@@ -45,7 +46,7 @@ public class AggregateController {
     @PostMapping("customers/{customerId}/trade")
     public Mono<TradeResponse> trade(
             @PathVariable Integer customerId,
-            @RequestBody TradeRequest tradeRequest){
+            @Valid @RequestBody TradeRequest tradeRequest){
         return customerService.trade(customerId, tradeRequest);
     }
 
