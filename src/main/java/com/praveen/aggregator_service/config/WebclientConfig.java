@@ -1,5 +1,6 @@
 package com.praveen.aggregator_service.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -8,18 +9,18 @@ import org.springframework.web.reactive.function.client.WebClient;
 public class WebclientConfig {
 
     @Bean
-    public WebClient customerWebClient() {
+    public WebClient customerWebClient(@Value("${customer.service.url}") String customerServiceUrl) {
         return WebClient
                 .builder()
-                .baseUrl("http://localhost:6060/customers")
+                .baseUrl(customerServiceUrl)
                 .build();
     }
 
     @Bean
-    public WebClient stockWebClient() {
+    public WebClient stockWebClient(@Value("${stock.service.url}") String stockServiceUrl) {
         return WebClient
                 .builder()
-                .baseUrl("http://localhost:7070/stock")
+                .baseUrl(stockServiceUrl)
                 .build();
     }
 }

@@ -29,7 +29,7 @@ public class StockService {
 
     public Mono<StockPriceResponse> getStockPrice(Ticker ticker) {
         return stockWebClient.get()
-                .uri("/{ticker}", ticker)
+                .uri("/stock/{ticker}", ticker)
                 .retrieve()
                 .bodyToMono(StockPriceResponse.class);
     }
@@ -43,7 +43,7 @@ public class StockService {
 
     private Flux<PriceStreamResponse> getPriceStreamResponse(){
         return stockWebClient.get()
-                .uri("/price-stream")
+                .uri("/stock/price-stream")
                 .accept(MediaType.APPLICATION_NDJSON)
                 .retrieve()
                 .bodyToFlux(PriceStreamResponse.class)

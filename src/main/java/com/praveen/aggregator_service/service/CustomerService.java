@@ -26,7 +26,7 @@ public class CustomerService {
 
     public Mono<CustomerPortfolioResponse> getCustomerPortfolio(Integer id){
         return customerWebClient.get()
-                .uri("/{id}", id)
+                .uri("/customers/{id}", id)
                 .retrieve()
                 .onStatus(httpStatusCode ->
                         httpStatusCode.is4xxClientError() ||
@@ -46,7 +46,7 @@ public class CustomerService {
 
     private Mono<TradeResponse> executeTrade(Integer customerId, StockTradeRequest stockTradeRequest) {
         return customerWebClient.post()
-                .uri("/{customerId}/trade", customerId)
+                .uri("/customers/{customerId}/trade", customerId)
                 .bodyValue(stockTradeRequest)
                 .retrieve()
                 .onStatus(httpStatusCode ->
