@@ -35,7 +35,7 @@ public class AggregateController {
     @GetMapping(value = "stock/price-stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<PriceStreamResponse> getPriceStream(){
         return this.stockService
-                .getPriceStreamResponse();
+                .getPriceStream();
     }
 
     @GetMapping("customers/{id}")
